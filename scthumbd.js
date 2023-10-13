@@ -3,6 +3,7 @@ import cluster from 'cluster';
 import express from 'express';
 import os from 'os';
 import util from 'util';
+import fs from 'fs';
 import scThumber from './lib/scthumber.js';
 
 const thumber = scThumber({
@@ -58,7 +59,8 @@ const workers = process.env.WORKERS ?? os.cpus().length;
 const port = process.env.PORT ?? 4001;
 
 if (cluster.isPrimary) {
-  console.log(`${'[m]'.red} ${'scthumbd %s'.yellow}`, process.env.npm_package_version);
+  const { version } = JSON.parse(fs.readFileSync('./package.json').toString());
+  console.log(`${'[m]'.red} ${'scthumbd %s'.yellow}`, version);
   console.log(`${'[m]'.red} Listening on port ${'%s'.green}...`, port);
 }
 

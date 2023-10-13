@@ -9,4 +9,4 @@ ENV NODE_ENV=production
 
 RUN yarn --frozen-lockfile --ignore-optional
 
-CMD ["yarn", "scthumbd"]
+CMD ["node", "scthumbd.js"]
