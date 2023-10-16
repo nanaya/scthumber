@@ -4,7 +4,10 @@ import express from 'express';
 import os from 'os';
 import util from 'util';
 import fs from 'fs';
+import gracefulShutdown from 'http-graceful-shutdown';
 import scThumber from './lib/scthumber.js';
+
+const SHUTDOWN_SIGNAL = 'shutdown';
 
 const thumber = scThumber({
   presets: {
@@ -70,9 +73,27 @@ if (cluster.isPrimary && workers > 1) {
     cluster.fork();
   }
 
+  let shuttingDown = false;
+  for (const signal of ['SIGINT', 'SIGTERM']) {
+    process.on(signal, () => {
+      if (!shuttingDown) {
+        shuttingDown = true;
+        for (const worker of Object.values(cluster.workers)) {
+          if (!worker.isDead()) {
+            worker.send(SHUTDOWN_SIGNAL);
+          }
+        }
+      }
+    });
+  }
+
   cluster.on('exit', (worker, code, signal) => {
-    console.log(`${'[m]'.red} worker ${worker.id} died, restarting`);
-    cluster.fork();
+    if (shuttingDown) {
+      console.log(`${'[m]'.red} worker ${worker.id} stopped`);
+    } else {
+      console.log(`${'[m]'.red} worker ${worker.id} died, restarting`);
+      cluster.fork();
+    }
   });
 } else {
   const app = express();
@@ -83,7 +104,16 @@ if (cluster.isPrimary && workers > 1) {
   app.get('/thumb/*', thumber.thumbnail);
   app.get('/optim/*', thumber.optimize);
 
-  app.listen(port);
+  const server = app.listen(port);
+
+  const closeHttp = gracefulShutdown(server, {
+    signals: '',
+  });
+  process.on('message', (msg) => {
+    if (msg === SHUTDOWN_SIGNAL) {
+      closeHttp().then(() => process.exit());
+    }
+  });
 
   console.log(`${'[w]'.magenta} Worker ${'%s'.green} started...`, cluster.worker?.id ?? 1);
 }
