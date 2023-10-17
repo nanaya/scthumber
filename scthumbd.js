@@ -7,8 +7,6 @@ import fs from 'fs';
 import gracefulShutdown from 'http-graceful-shutdown';
 import scThumber from './lib/scthumber.js';
 
-const SHUTDOWN_SIGNAL = 'shutdown';
-
 const thumber = scThumber({
   presets: {
     // Beatmap cover
@@ -79,9 +77,7 @@ if (cluster.isPrimary && workers > 1) {
       if (!shuttingDown) {
         shuttingDown = true;
         for (const worker of Object.values(cluster.workers)) {
-          if (!worker.isDead()) {
-            worker.send(SHUTDOWN_SIGNAL);
-          }
+          worker.kill(signal);
         }
       }
     });
@@ -106,14 +102,7 @@ if (cluster.isPrimary && workers > 1) {
 
   const server = app.listen(port);
 
-  const closeHttp = gracefulShutdown(server, {
-    signals: '',
-  });
-  process.on('message', (msg) => {
-    if (msg === SHUTDOWN_SIGNAL) {
-      closeHttp().then(() => process.exit());
-    }
-  });
+  gracefulShutdown(server);
 
   console.log(`${'[w]'.magenta} Worker ${'%s'.green} started...`, cluster.worker?.id ?? 1);
 }
