@@ -2,8 +2,6 @@ import 'colors';
 import cluster from 'cluster';
 import express from 'express';
 import os from 'os';
-import util from 'util';
-import fs from 'fs';
 import gracefulShutdown from 'http-graceful-shutdown';
 import scThumber from './lib/scthumber.js';
 
@@ -60,8 +58,7 @@ const workers = process.env.WORKERS ?? os.cpus().length;
 const port = process.env.PORT ?? 4001;
 
 if (cluster.isPrimary) {
-  const { version } = JSON.parse(fs.readFileSync('./package.json').toString());
-  console.log(`${'[m]'.red} ${'scthumbd %s'.yellow}`, version);
+  console.log(`${'[m]'.red} ${'scthumbd'.yellow}`);
   console.log(`${'[m]'.red} Listening on port ${'%s'.green}...`, port);
 }
 
@@ -95,8 +92,8 @@ if (cluster.isPrimary && workers > 1) {
   const app = express();
 
   app.get('/', function(req, res) {
-    res.send(util.format("scthumbd %s\n", process.env.npm_package_version));
-  })
+    res.send("scthumbd\n");
+  });
   app.get('/thumb/*', thumber.thumbnail);
   app.get('/optim/*', thumber.optimize);
 
