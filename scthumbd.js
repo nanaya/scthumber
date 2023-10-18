@@ -2,7 +2,7 @@ import 'colors';
 import cluster from 'cluster';
 import express from 'express';
 import os from 'os';
-import util from 'util';
+import gracefulShutdown from 'http-graceful-shutdown';
 import scThumber from './lib/scthumber.js';
 
 const thumber = scThumber({
@@ -58,7 +58,7 @@ const workers = process.env.WORKERS ?? os.cpus().length;
 const port = process.env.PORT ?? 4001;
 
 if (cluster.isPrimary) {
-  console.log(`${'[m]'.red} ${'scthumbd %s'.yellow}`, process.env.npm_package_version);
+  console.log(`${'[m]'.red} ${'scthumbd'.yellow}`);
   console.log(`${'[m]'.red} Listening on port ${'%s'.green}...`, port);
 }
 
@@ -68,20 +68,38 @@ if (cluster.isPrimary && workers > 1) {
     cluster.fork();
   }
 
+  let shuttingDown = false;
+  for (const signal of ['SIGINT', 'SIGTERM']) {
+    process.on(signal, () => {
+      if (!shuttingDown) {
+        shuttingDown = true;
+        for (const worker of Object.values(cluster.workers)) {
+          worker.kill(signal);
+        }
+      }
+    });
+  }
+
   cluster.on('exit', (worker, code, signal) => {
-    console.log(`${'[m]'.red} worker ${worker.id} died, restarting`);
-    cluster.fork();
+    if (shuttingDown) {
+      console.log(`${'[m]'.red} worker ${worker.id} stopped`);
+    } else {
+      console.log(`${'[m]'.red} worker ${worker.id} died, restarting`);
+      cluster.fork();
+    }
   });
 } else {
   const app = express();
 
   app.get('/', function(req, res) {
-    res.send(util.format("scthumbd %s\n", process.env.npm_package_version));
-  })
+    res.send("scthumbd\n");
+  });
   app.get('/thumb/*', thumber.thumbnail);
   app.get('/optim/*', thumber.optimize);
 
-  app.listen(port);
+  const server = app.listen(port);
+
+  gracefulShutdown(server);
 
   console.log(`${'[w]'.magenta} Worker ${'%s'.green} started...`, cluster.worker?.id ?? 1);
 }
