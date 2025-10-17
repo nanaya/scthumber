@@ -7,6 +7,6 @@ ADD --chown=node:node . /app
 WORKDIR /app
 ENV NODE_ENV=production
 
-RUN yarn --frozen-lockfile --ignore-optional
+RUN yarn --frozen-lockfile
 
 CMD ["node", "scthumbd.js"]
