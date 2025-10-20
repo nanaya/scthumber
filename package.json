@@ -24,12 +24,12 @@
   },
   "main": "./scthumbd.js",
   "dependencies": {
-    "canvas": "^2.11.2",
+    "canvas": "^3.2.0",
     "colors": "^1.4.0",
     "express": "^4.18.2",
     "hot-shots": "^10.0.0",
     "http-graceful-shutdown": "^3.1.13",
-    "sharp": "^0.32.6",
+    "sharp": "^0.34.4",
     "smartcrop": "^2.0.x"
   },
   "scripts": {
@@ -38,5 +38,8 @@
   "type": "module",
   "engines": {
     "node": ">=20.0.0"
+  },
+  "resolutions": {
+    "nan": "^2.22.0"
   }
 }
